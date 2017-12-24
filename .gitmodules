@@ -1,0 +1,4 @@
+[submodule "os"]
+	path = os
+	url = https://github.com/korken89/ChibiOS.git
+	branch = master
