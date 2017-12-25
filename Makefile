@@ -88,7 +88,7 @@ endif
 #
 
 # Define project name here
-PROJECT = stm32h743_test
+PROJECT = ch
 
 # Imported source files and paths
 CHIBIOS  := os
