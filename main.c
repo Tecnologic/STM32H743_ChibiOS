@@ -25,7 +25,7 @@ void callback (GPTDriver *gptp);
  * GPT4 configuration. This timer is used as trigger for the ADC.
  */
 static const GPTConfig gptcfg = {
-  .frequency =  10U,
+  .frequency =  1000000U,
   .callback  =  callback,
   .cr2       =  0,  /* MMS = 010 = TRGO on Update Event.        */
   .dier      =  0U
@@ -42,11 +42,11 @@ static THD_FUNCTION(Thread1, arg) {
   (void)arg;
   chRegSetThreadName("blinker");
   while (true) {
-    palSetLine(LINE_LED2);
-    palSetLine(LINE_LED3);
-    chThdSleepMilliseconds(500);
-    palClearLine(LINE_LED2);
-    palClearLine(LINE_LED3);
+//    palSetLine(LINE_LED2);
+//    palSetLine(LINE_LED3);
+//    chThdSleepMilliseconds(500);
+//    palClearLine(LINE_LED2);
+//    palClearLine(LINE_LED3);
     chThdSleepMilliseconds(500);
   }
 }
@@ -54,7 +54,22 @@ static THD_FUNCTION(Thread1, arg) {
 void callback (GPTDriver *gptp)
 {
 	(void)gptp;
-	palToggleLine(LINE_LED1);
+	static int32_t cnt = 0;
+	static int32_t duty = 0;
+	static int32_t sign = 1;
+	cnt++;
+
+	if(cnt > 100)
+	{
+		cnt = 0;
+		duty += sign;
+
+		if(duty > 100) sign = -1;
+		if(duty < 0) sign = 1;
+	}
+
+	if(duty > cnt) palSetLine(LINE_LED1);
+	else palClearLine(LINE_LED1);
 }
 
 /*
@@ -76,6 +91,7 @@ int main(void) {
      * Starting GPT1 driver, it is used for triggering the ADC.
      */
   gptStart(&GPTD1, &gptcfg);
+  gptStartContinuous(&GPTD1, 100);
 
   /*
    * Activates the serial driver 1 using the driver default configuration.
