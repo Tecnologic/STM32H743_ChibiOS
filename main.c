@@ -91,7 +91,7 @@ int main(void) {
      * Starting GPT1 driver, it is used for triggering the ADC.
      */
   gptStart(&GPTD1, &gptcfg);
-  gptStartContinuous(&GPTD1, 100);
+  gptStartContinuous(&GPTD1, 50);
 
   /*
    * Activates the serial driver 1 using the driver default configuration.
