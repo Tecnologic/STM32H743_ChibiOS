@@ -72,6 +72,65 @@ void callback (GPTDriver *gptp)
 	else palClearLine(LINE_LED1);
 }
 
+
+static void pwmpcb(PWMDriver *pwmp) {
+
+  (void)pwmp;
+}
+
+static void pwmc1cb(PWMDriver *pwmp) {
+
+  (void)pwmp;
+}
+
+static PWMConfig pwmcfg = {
+  10000,                                    /* 10kHz PWM clock frequency.   */
+  10000,                                    /* Initial PWM period 1S.       */
+  pwmpcb,
+  {
+   {PWM_OUTPUT_ACTIVE_HIGH, pwmc1cb},
+   {PWM_OUTPUT_DISABLED, NULL},
+   {PWM_OUTPUT_DISABLED, NULL},
+   {PWM_OUTPUT_DISABLED, NULL}
+  },
+  0,
+  0
+};
+
+/*===========================================================================*/
+/* ICU driver related.                                                       */
+/*===========================================================================*/
+
+icucnt_t last_width, last_period;
+
+static void icuwidthcb(ICUDriver *icup) {
+
+  palSetLine(LINE_ARD_D13);
+  last_width = icuGetWidthX(icup);
+}
+
+static void icuperiodcb(ICUDriver *icup) {
+
+  palClearLine(LINE_ARD_D13);
+  last_period = icuGetPeriodX(icup);
+}
+
+static void icuovfcb(ICUDriver *icup) {
+
+  (void)icup;
+}
+
+static ICUConfig icucfg = {
+  ICU_INPUT_ACTIVE_HIGH,
+  10000,                                    /* 10kHz ICU clock frequency.   */
+  icuwidthcb,
+  icuperiodcb,
+  icuovfcb,
+  ICU_CHANNEL_1,
+  0
+};
+
+
 /*
  * Application entry point.
  */
@@ -97,6 +156,32 @@ int main(void) {
    * Activates the serial driver 1 using the driver default configuration.
    */
   sdStart(&SD3, NULL);
+
+  /*
+   * Starting PWM driver 3 and enabling the notifications.
+   * GPIOB0 is programmed as PWM output (channel 3 of TIM3).
+   */
+  pwmStart(&PWMD3, &pwmcfg);
+  pwmEnablePeriodicNotification(&PWMD3);
+  palSetLineMode(LINE_TIM3_CH3, PAL_MODE_ALTERNATE(2));
+
+  /*
+   * Starting ICU driver 2.
+   * GPIOA0 is programmed as ICU input (channel 1 of TIM2).
+   */
+  icuStart(&ICUD2, &icucfg);
+  palSetLineMode(LINE_TIM2_CH1, PAL_MODE_ALTERNATE(1));
+
+  /*
+   * Starting ICU capture and enabling the notifications.
+   */
+  icuStartCapture(&ICUD2);
+  icuEnableNotifications(&ICUD2);
+
+  /*
+   * Changes the PWM channel 3 to 25% duty cycle.
+   */
+  pwmEnableChannel(&PWMD3, 3, PWM_PERCENTAGE_TO_WIDTH(&PWMD1, 2500));
 
   /*
    * Creates the example thread.
