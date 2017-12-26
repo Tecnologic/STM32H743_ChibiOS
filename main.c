@@ -69,8 +69,8 @@ void callback (GPTDriver *gptp)
 		if(duty < 0) sign = 1;
 	}
 
-	if(duty > cnt) palSetLine(LINE_LED1);
-	else palClearLine(LINE_LED1);
+	if(duty > cnt) palSetLine(LINE_LED3);
+	else palClearLine(LINE_LED3);
 }
 
 
@@ -89,8 +89,8 @@ static PWMConfig pwmcfg = {
 		10000,                                    /* Initial PWM period 1S.       */
 		pwmpcb,
 		{
-				{PWM_OUTPUT_ACTIVE_HIGH, pwmc1cb},
 				{PWM_OUTPUT_DISABLED, NULL},
+				{PWM_OUTPUT_ACTIVE_HIGH, pwmc1cb},
 				{PWM_OUTPUT_DISABLED, NULL},
 				{PWM_OUTPUT_DISABLED, NULL}
 		},
@@ -105,14 +105,10 @@ static PWMConfig pwmcfg = {
 icucnt_t last_width, last_period;
 
 static void icuwidthcb(ICUDriver *icup) {
-
-	palSetLine(LINE_ARD_D13);
 	last_width = icuGetWidthX(icup);
 }
 
 static void icuperiodcb(ICUDriver *icup) {
-
-	palClearLine(LINE_ARD_D13);
 	last_period = icuGetPeriodX(icup);
 }
 
@@ -152,7 +148,7 @@ int main(void) {
 	 * Starting GPT1 driver, it is used for triggering the ADC.
 	 */
 	gptStart(&GPTD1, &gptcfg);
-	gptStartContinuous(&GPTD1, 50);
+	gptStartContinuous(&GPTD1, 100);
 
 	/*
 	 * Activates the serial driver 1 using the driver default configuration.
@@ -163,9 +159,9 @@ int main(void) {
 	 * Starting PWM driver 3 and enabling the notifications.
 	 * GPIOB0 is programmed as PWM output (channel 3 of TIM3).
 	 */
-	pwmStart(&PWMD3, &pwmcfg);
-	pwmEnablePeriodicNotification(&PWMD3);
-	palSetLineMode(LINE_TIM3_CH3, PAL_MODE_ALTERNATE(2));
+	pwmStart(&PWMD4, &pwmcfg);
+	pwmEnablePeriodicNotification(&PWMD4);
+	palSetLineMode(LINE_LED2, PAL_MODE_ALTERNATE(2));
 
 	/*
 	 * Starting ICU driver 2.
@@ -183,7 +179,7 @@ int main(void) {
 	/*
 	 * Changes the PWM channel 3 to 25% duty cycle.
 	 */
-	pwmEnableChannel(&PWMD3, 3, PWM_PERCENTAGE_TO_WIDTH(&PWMD3, 2500));
+	pwmEnableChannel(&PWMD4, 1, PWM_PERCENTAGE_TO_WIDTH(&PWMD4, 2500));
 
 	/*
 	 * Creates the example thread.
@@ -195,9 +191,9 @@ int main(void) {
 	 * sleeping in a loop and check the button state.
 	 */
 	while (1) {
-		pwmEnableChannel(&PWMD3, 3, PWM_PERCENTAGE_TO_WIDTH(&PWMD3, duty));
+		pwmEnableChannel(&PWMD4, 1, PWM_PERCENTAGE_TO_WIDTH(&PWMD4, duty));
 		duty += 500;
-		if(duty < 10000) duty = 500;
+		if(duty > 10000) duty = 500;
 
 		if (palReadLine(LINE_BUTTON)) {
 			test_execute((BaseSequentialStream *)&SD3, &rt_test_suite);
