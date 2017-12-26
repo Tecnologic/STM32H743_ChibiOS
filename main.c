@@ -16,8 +16,21 @@
 
 #include "ch.h"
 #include "hal.h"
-//#include "rt_test_root.h"
-//#include "oslib_test_root.h"
+#include "rt_test_root.h"
+#include "oslib_test_root.h"
+
+void callback (GPTDriver *gptp);
+
+/*
+ * GPT4 configuration. This timer is used as trigger for the ADC.
+ */
+static const GPTConfig gptcfg = {
+  .frequency =  10U,
+  .callback  =  callback,
+  .cr2       =  0,  /* MMS = 010 = TRGO on Update Event.        */
+  .dier      =  0U
+};
+
 
 /*
  * This is a periodic thread that does absolutely nothing except flashing
@@ -29,15 +42,19 @@ static THD_FUNCTION(Thread1, arg) {
   (void)arg;
   chRegSetThreadName("blinker");
   while (true) {
-    palSetLine(LINE_LED1);
     palSetLine(LINE_LED2);
     palSetLine(LINE_LED3);
     chThdSleepMilliseconds(500);
-    palClearLine(LINE_LED1);
     palClearLine(LINE_LED2);
     palClearLine(LINE_LED3);
     chThdSleepMilliseconds(500);
   }
+}
+
+void callback (GPTDriver *gptp)
+{
+	(void)gptp;
+	palToggleLine(LINE_LED1);
 }
 
 /*
@@ -56,9 +73,14 @@ int main(void) {
   chSysInit();
 
   /*
+     * Starting GPT1 driver, it is used for triggering the ADC.
+     */
+  gptStart(&GPTD1, &gptcfg);
+
+  /*
    * Activates the serial driver 1 using the driver default configuration.
    */
-//  sdStart(&SD1, NULL);
+  sdStart(&SD3, NULL);
 
   /*
    * Creates the example thread.
@@ -70,12 +92,10 @@ int main(void) {
    * sleeping in a loop and check the button state.
    */
   while (1) {
-#if 0
-    if (palReadLine(LINE_BUTTON_USER)) {
-      test_execute((BaseSequentialStream *)&SD1, &rt_test_suite);
-      test_execute((BaseSequentialStream *)&SD1, &oslib_test_suite);
+    if (palReadLine(LINE_BUTTON)) {
+      test_execute((BaseSequentialStream *)&SD3, &rt_test_suite);
+      test_execute((BaseSequentialStream *)&SD3, &oslib_test_suite);
     }
-#endif
     chThdSleepMilliseconds(500);
   }
 }
